@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 2,
+  "agentName": "VAIBHAV-P-LAP",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus11.actions.githubusercontent.com/zTZ33tiRzYiPxQAdQ1HfW3b7023oAd8TJXK1GvRTW3DS1buSi5/",
+  "gitHubUrl": "https://github.com/flexoratest/POCFlexora",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
