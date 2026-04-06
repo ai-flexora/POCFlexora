@@ -1,0 +1,234 @@
+name: Felxora Engine — Issue to PR
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  generate-pr:
+    # Only trigger if issue has label 'felxora' OR any issue is opened
+    if: contains(github.event.issue.labels.*.name, 'felxora') || github.event_name == 'issues'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+
+    steps:
+      # ?? 1. Checkout main branch ??????????????????????????????????????
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ?? 2. Setup .NET 8 ??????????????????????????????????????????????
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ?? 3. Read existing controller + knowledge base files ???????????
+      - name: Read Repo Context
+        id: read_context
+        run: |
+          # Read the main controller
+          CONTROLLER=$(cat Controllers/WeatherForecastController.cs 2>/dev/null || echo "File not found")
+
+          # Read knowledge base files
+          CODE_REF=$(cat knowledge-base/code-reference.md 2>/dev/null || echo "No code reference found")
+          US_RET=$(cat knowledge-base/us-retriment.md 2>/dev/null || echo "No US retriment found")
+          CLAUDE_MD=$(cat .claude/claude.md 2>/dev/null || echo "No claude.md found")
+
+          # Read project file
+          CSPROJ=$(cat POCFlexora.csproj 2>/dev/null || echo "No csproj found")
+
+          # Save to files to avoid env var size limits
+          echo "$CONTROLLER" > /tmp/controller.txt
+          echo "$CODE_REF" > /tmp/code_ref.txt
+          echo "$US_RET" > /tmp/us_ret.txt
+          echo "$CLAUDE_MD" > /tmp/claude_md.txt
+          echo "$CSPROJ" > /tmp/csproj.txt
+
+          echo "? Repo context loaded"
+
+      # ?? 4. Call Claude API to generate code ?????????????????????????
+      - name: Generate Code via Claude API
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          CONTROLLER=$(cat /tmp/controller.txt)
+          CODE_REF=$(cat /tmp/code_ref.txt)
+          US_RET=$(cat /tmp/us_ret.txt)
+          CLAUDE_MD=$(cat /tmp/claude_md.txt)
+
+          # Build the prompt
+          PROMPT="You are the Felxora Engine for a .NET 8 Web API project.
+
+          ## Your Instructions (claude.md)
+          $CLAUDE_MD
+
+          ## Coding Standards (code-reference.md)
+          $CODE_REF
+
+          ## Story Format (us-retriment.md)
+          $US_RET
+
+          ## Existing Controller Code
+          \`\`\`csharp
+          $CONTROLLER
+          \`\`\`
+
+          ## Developer Requirement (GitHub Issue)
+          Title: $ISSUE_TITLE
+          Details: $ISSUE_BODY
+
+          ## Your Task
+          1. Add the requested endpoint(s) to WeatherForecastController.cs
+          2. Follow the coding standards exactly
+          3. Generate xUnit unit tests for every new endpoint
+
+          ## Response Format
+          Respond ONLY with a valid JSON object, no markdown, no explanation:
+          {
+            \"controller_code\": \"<complete updated controller file content>\",
+            \"test_code\": \"<complete xUnit test file content>\",
+            \"pr_summary\": \"<2-3 sentence summary of what was added>\",
+            \"endpoints_added\": \"<list of new endpoints e.g. GET /api/weatherforecast/{id}>\"
+          }"
+
+          # Call Claude API
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "{
+              \"model\": \"claude-opus-4-5\",
+              \"max_tokens\": 4000,
+              \"messages\": [{
+                \"role\": \"user\",
+                \"content\": $(echo "$PROMPT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+              }]
+            }")
+
+          # Extract the text content from response
+          GENERATED=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          text = data['content'][0]['text']
+          # Strip any markdown code fences if present
+          text = text.strip()
+          if text.startswith('\`\`\`json'):
+              text = text[7:]
+          if text.startswith('\`\`\`'):
+              text = text[3:]
+          if text.endswith('\`\`\`'):
+              text = text[:-3]
+          print(text.strip())
+          ")
+
+          echo "$GENERATED" > /tmp/generated.json
+
+          # Parse and save the generated files
+          python3 -c "
+          import json, sys
+          with open('/tmp/generated.json') as f:
+              data = json.load(f)
+          with open('/tmp/new_controller.cs', 'w') as f:
+              f.write(data['controller_code'])
+          with open('/tmp/new_tests.cs', 'w') as f:
+              f.write(data['test_code'])
+          with open('/tmp/pr_summary.txt', 'w') as f:
+              f.write(data['pr_summary'])
+          with open('/tmp/endpoints.txt', 'w') as f:
+              f.write(data['endpoints_added'])
+          print('? Code generated successfully')
+          "
+
+          echo "? Claude API call complete"
+
+      # ?? 5. Create new branch ?????????????????????????????????????????
+      - name: Create Feature Branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          # Sanitize branch name from issue title
+          BRANCH_NAME="feature/FEL-$ISSUE_NUMBER-$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-50)"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+          git config user.name "Felxora Engine"
+          git config user.email "felxora@github-actions.com"
+          git checkout -b "$BRANCH_NAME"
+          echo "? Branch created: $BRANCH_NAME"
+
+      # ?? 6. Write generated files to repo ????????????????????????????
+      - name: Write Generated Files
+        run: |
+          # Update the controller
+          cp /tmp/new_controller.cs Controllers/WeatherForecastController.cs
+
+          # Create tests folder if it doesn't exist
+          mkdir -p Tests
+
+          # Write the test file
+          cp /tmp/new_tests.cs Tests/WeatherForecastControllerTests.cs
+
+          echo "? Files written to repo"
+
+      # ?? 7. Verify it builds ??????????????????????????????????????????
+      - name: Verify Build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          echo "? Build successful"
+
+      # ?? 8. Commit files ??????????????????????????????????????????????
+      - name: Commit Generated Code
+        run: |
+          git add Controllers/WeatherForecastController.cs
+          git add Tests/WeatherForecastControllerTests.cs
+          git commit -m "[Felxora] FEL-${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+          git push origin "$BRANCH_NAME"
+          echo "? Code committed and pushed"
+
+      # ?? 9. Open Pull Request ?????????????????????????????????????????
+      - name: Create Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          PR_SUMMARY=$(cat /tmp/pr_summary.txt)
+          ENDPOINTS=$(cat /tmp/endpoints.txt)
+
+          PR_BODY="## ?? Generated by Felxora Engine
+
+          ### Linked Issue
+          Closes #$ISSUE_NUMBER
+
+          ### Summary
+          $PR_SUMMARY
+
+          ### Endpoints Added
+          $ENDPOINTS
+
+          ### Files Changed
+          - \`Controllers/WeatherForecastController.cs\` — Updated with new endpoints
+          - \`Tests/WeatherForecastControllerTests.cs\` — Unit tests added
+
+          ---
+          *This PR was automatically generated by Felxora Engine using Claude AI*"
+
+          gh pr create \
+            --title "[Felxora] FEL-$ISSUE_NUMBER: $ISSUE_TITLE" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH_NAME"
+
+          echo "? PR created successfully"

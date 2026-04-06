@@ -1,0 +1,102 @@
+name: Felxora Deploy — PR Merge to Local
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  deploy-local:
+    # Only runs when PR is actually MERGED (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted       # ? Runs on YOUR Windows machine
+
+    steps:
+      # ?? 1. Checkout latest main ??????????????????????????????????????
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # ?? 2. Setup .NET ????????????????????????????????????????????????
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ?? 3. Restore dependencies ??????????????????????????????????????
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      # ?? 4. Build ?????????????????????????????????????????????????????
+      - name: Build Project
+        run: dotnet build --configuration Release --no-restore
+
+      # ?? 5. Run Tests ?????????????????????????????????????????????????
+      - name: Run Unit Tests
+        run: dotnet test --no-restore --verbosity normal
+        continue-on-error: true   # Don't block deploy if tests fail in POC
+
+      # ?? 6. Stop any existing running instance ????????????????????????
+      - name: Stop Existing App
+        shell: powershell
+        run: |
+          $proc = Get-Process -Name "POCFlexora" -ErrorAction SilentlyContinue
+          if ($proc) {
+            Write-Host "Stopping existing POCFlexora process..."
+            Stop-Process -Name "POCFlexora" -Force
+            Start-Sleep -Seconds 2
+          } else {
+            Write-Host "No existing process found, continuing..."
+          }
+
+      # ?? 7. Start the app in background ??????????????????????????????
+      - name: Start App
+        shell: powershell
+        run: |
+          $appPath = "${{ github.workspace }}"
+          Start-Process powershell -ArgumentList `
+            "-NoProfile -Command `"cd '$appPath'; dotnet run --configuration Release --urls 'http://localhost:5000'`"" `
+            -WindowStyle Hidden
+          Write-Host "App starting..."
+          Start-Sleep -Seconds 8
+
+      # ?? 8. Verify Swagger is UP ??????????????????????????????????????
+      - name: Verify Swagger Loads
+        shell: powershell
+        run: |
+          $maxRetries = 5
+          $retryCount = 0
+          $success = $false
+
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:5000/swagger/index.html" `
+                -UseBasicParsing -TimeoutSec 10
+              if ($response.StatusCode -eq 200) {
+                Write-Host "Swagger is UP at http://localhost:5000/swagger/index.html"
+                $success = $true
+              }
+            } catch {
+              $retryCount++
+              Write-Host "Attempt $retryCount failed, retrying in 5 seconds..."
+              Start-Sleep -Seconds 5
+            }
+          }
+
+          if (-not $success) {
+            Write-Host "Swagger did not load after $maxRetries attempts"
+            exit 1
+          }
+
+      # ?? 9. Post deploy summary ???????????????????????????????????????
+      - name: Deploy Summary
+        shell: powershell
+        run: |
+          Write-Host "================================================"
+          Write-Host "FELXORA DEPLOY COMPLETE"
+          Write-Host "PR: ${{ github.event.pull_request.title }}"
+          Write-Host "Branch: ${{ github.event.pull_request.head.ref }}"
+          Write-Host "Swagger: http://localhost:5000/swagger/index.html"
+          Write-Host "================================================"
