@@ -27,4 +27,4 @@ RUN dotnet publish "./POCFlexora.csproj" -c $BUILD_CONFIGURATION -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "POCFlexora.dll"]
+ENTRYPOINT ["dotnet", "POCFlexora.dll"]claude
