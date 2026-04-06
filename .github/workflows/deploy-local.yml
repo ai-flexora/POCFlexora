@@ -1,4 +1,4 @@
-name: Felxora Deploy — PR Merge to Local
+name: Felxora Deploy ï¿½ PR Merge to Local
 
 on:
   pull_request:
@@ -57,7 +57,7 @@ jobs:
         run: |
           $appPath = "${{ github.workspace }}"
           Start-Process powershell -ArgumentList `
-            "-NoProfile -Command `"cd '$appPath'; dotnet run --configuration Release --urls 'http://localhost:5000'`"" `
+            "-NoProfile -Command `"cd '$appPath'; dotnet run --configuration Release --urls 'http://localhost:5165'`"" `
             -WindowStyle Hidden
           Write-Host "App starting..."
           Start-Sleep -Seconds 8
@@ -72,10 +72,10 @@ jobs:
 
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:5000/swagger/index.html" `
+              $response = Invoke-WebRequest -Uri "http://localhost:5165/swagger/index.html" `
                 -UseBasicParsing -TimeoutSec 10
               if ($response.StatusCode -eq 200) {
-                Write-Host "Swagger is UP at http://localhost:5000/swagger/index.html"
+                Write-Host "Swagger is UP at http://localhost:5165/swagger/index.html"
                 $success = $true
               }
             } catch {
@@ -98,5 +98,5 @@ jobs:
           Write-Host "FELXORA DEPLOY COMPLETE"
           Write-Host "PR: ${{ github.event.pull_request.title }}"
           Write-Host "Branch: ${{ github.event.pull_request.head.ref }}"
-          Write-Host "Swagger: http://localhost:5000/swagger/index.html"
+          Write-Host "Swagger: http://localhost:5165/swagger/index.html"
           Write-Host "================================================"
