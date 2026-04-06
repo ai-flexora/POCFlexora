@@ -11,6 +11,18 @@ namespace POCFlexora.Controllers
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
+        private static readonly IReadOnlyList<WeatherForecast> Forecasts =
+            Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                TemperatureC = (index * 7) - 10,
+                Summary = new[]
+                {
+                    "Freezing", "Bracing", "Chilly", "Cool", "Mild",
+                    "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+                }[index % 10]
+            }).ToList();
+
         private readonly ILogger<WeatherForecastController> _logger;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
@@ -21,13 +33,24 @@ namespace POCFlexora.Controllers
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            return Forecasts;
+        }
+
+        [HttpGet("{id}", Name = "GetWeatherForecastById")]
+        public IActionResult GetById(int id)
+        {
+            try
             {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+                if (id < 1 || id > Forecasts.Count)
+                    return NotFound();
+
+                return Ok(Forecasts[id - 1]);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving forecast for id {Id}", id);
+                return StatusCode(500);
+            }
         }
     }
 }
