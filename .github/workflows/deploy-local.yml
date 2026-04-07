@@ -20,14 +20,21 @@ jobs:
           ref: master
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
-
+      
       # 2. Configure Git for Windows self-hosted runner
       - name: Configure Git
+        shell: powershell
         run: |
+          # Set Git email and name for actions bot
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git config --global --add safe.directory ${{ github.workspace }}
 
+          # Mark the workspace as a safe directory (handles spaces)
+          $safeDir = "${{ github.workspace }}"
+          git config --global --add safe.directory "`"$safeDir`""
+
+          Write-Host "Git configured successfully for Windows self-hosted runner."
+      
       # 3. Setup .NET 8
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
