@@ -24,8 +24,8 @@ jobs:
       # 2. Configure Git for Windows self-hosted runner
       - name: Configure Git
         run: |
-          git config --global user.email "felxora@github-actions.com"
-          git config --global user.name "Felxora Engine"
+          git config --global user.email "flexorstest@gmail.com"
+          git config --global user.name "flexoratest"
           git config --global --add safe.directory ${{ github.workspace }}
 
       # 3. Setup .NET 8
