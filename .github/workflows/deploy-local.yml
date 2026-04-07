@@ -8,7 +8,6 @@ on:
 
 jobs:
   deploy-local:
-    # Only runs when PR is actually MERGED (not just closed)
     if: github.event.pull_request.merged == true
     runs-on: self-hosted
 
@@ -20,66 +19,39 @@ jobs:
           ref: master
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
-      
-      # 2. Configure Git for Windows self-hosted runner
-      - name: Configure Git
+
+      # 2. Verify Docker is available
+      - name: Verify Docker
         shell: powershell
         run: |
-          # Set Git email and name for actions bot
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          docker --version
 
-          # Mark the workspace as a safe directory (handles spaces)
-          $safeDir = "${{ github.workspace }}"
-          git config --global --add safe.directory "`"$safeDir`""
-
-          Write-Host "Git configured successfully for Windows self-hosted runner."
-      
-      # 3. Verify .NET is available
-      - name: Verify .NET
+      # 3. Build Docker image
+      - name: Build Docker Image
         shell: powershell
         run: |
-          $version = dotnet --version
-          Write-Host ".NET version: $version"
+          docker build -t pocflexora .
 
-      # 4. Restore dependencies
-      - name: Restore Dependencies
-        run: dotnet restore POCFlexora.csproj
-
-      # 5. Build
-      - name: Build Project
-        run: dotnet build POCFlexora.csproj --configuration Release --no-restore
-
-      # 6. Run Tests
-      - name: Run Unit Tests
-        run: dotnet test --no-restore --verbosity normal
-        continue-on-error: true
-
-      # 7. Stop any existing running instance
-      - name: Stop Existing App
+      # 4. Stop any existing container
+      - name: Stop Existing Container
         shell: powershell
         run: |
-          $proc = Get-Process -Name "POCFlexora" -ErrorAction SilentlyContinue
-          if ($proc) {
-            Write-Host "Stopping existing POCFlexora process..."
-            Stop-Process -Name "POCFlexora" -Force
-            Start-Sleep -Seconds 2
+          $existing = docker ps -q -f "name=pocflexora"
+          if ($existing) {
+              Write-Host "Stopping existing container..."
+              docker stop $existing
+              docker rm $existing
           } else {
-            Write-Host "No existing process found, continuing..."
+              Write-Host "No existing container found"
           }
 
-      # 8. Start the app in background
-      - name: Start App
+      # 5. Run container
+      - name: Start Docker Container
         shell: powershell
         run: |
-          $appPath = "${{ github.workspace }}"
-          Start-Process powershell -ArgumentList `
-            "-NoProfile -Command `"cd '$appPath'; dotnet run --configuration Release --urls 'http://localhost:5165'`"" `
-            -WindowStyle Hidden
-          Write-Host "App starting..."
-          Start-Sleep -Seconds 8
+          docker run -d -p 8080:8080 --name pocflexora pocflexora
 
-      # 9. Verify Swagger is UP
+      # 6. Verify Swagger is UP
       - name: Verify Swagger Loads
         shell: powershell
         run: |
@@ -89,10 +61,10 @@ jobs:
 
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:5165/swagger/index.html" `
+              $response = Invoke-WebRequest -Uri "http://localhost:8080/swagger/index.html" `
                 -UseBasicParsing -TimeoutSec 10
               if ($response.StatusCode -eq 200) {
-                Write-Host "Swagger is UP at http://localhost:5165/swagger/index.html"
+                Write-Host "Swagger is UP at http://localhost:8080/swagger/index.html"
                 $success = $true
               }
             } catch {
@@ -107,7 +79,7 @@ jobs:
             exit 1
           }
 
-      # 10. Post deploy summary
+      # 7. Post deploy summary
       - name: Deploy Summary
         shell: powershell
         run: |
@@ -115,5 +87,5 @@ jobs:
           Write-Host "FELXORA DEPLOY COMPLETE"
           Write-Host "PR: ${{ github.event.pull_request.title }}"
           Write-Host "Branch: ${{ github.event.pull_request.head.ref }}"
-          Write-Host "Swagger: http://localhost:5165/swagger/index.html"
+          Write-Host "Swagger: http://localhost:8080/swagger/index.html"
           Write-Host "================================================"
