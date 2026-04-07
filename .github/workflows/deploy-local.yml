@@ -44,11 +44,11 @@ jobs:
 
       # 4. Restore dependencies
       - name: Restore Dependencies
-        run: dotnet restore
+        run: dotnet restore POCFlexora.csproj
 
       # 5. Build
       - name: Build Project
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build POCFlexora.csproj --configuration Release --no-restore
 
       # 6. Run Tests
       - name: Run Unit Tests
