@@ -1,0 +1,12 @@
+﻿{
+  "repositoryName": "flexoratest/POCFlexora",
+  "pipelineDirectory": "POCFlexora",
+  "workspaceDirectory": "POCFlexora\\POCFlexora",
+  "repositories": {
+    "flexoratest/POCFlexora": {
+      "repositoryPath": "POCFlexora\\POCFlexora",
+      "lastRunOn": "04/07/2026 17:10:36 +05:30"
+    }
+  },
+  "lastRunOn": "04/07/2026 17:21:38 +05:30"
+}
