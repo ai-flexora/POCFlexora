@@ -11,7 +11,7 @@ namespace POCFlexora.Controllers
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        private static readonly IReadOnlyList<WeatherForecast> Forecasts =
+        private readonly List<WeatherForecast> _forecasts =
             Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -19,7 +19,7 @@ namespace POCFlexora.Controllers
                 Summary = new[]
                 {
                     "Freezing", "Bracing", "Chilly", "Cool", "Mild",
-                    "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+                    "Warm", "Balmy", "Hot", "Sweltering", "Scorching","VeryHighHeat","shouldlearntolerate"
                 }[index % 10]
             }).ToList();
 
@@ -33,7 +33,7 @@ namespace POCFlexora.Controllers
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
-            return Forecasts;
+            return _forecasts;
         }
 
         [HttpGet("{id}", Name = "GetWeatherForecastById")]
@@ -41,14 +41,32 @@ namespace POCFlexora.Controllers
         {
             try
             {
-                if (id < 1 || id > Forecasts.Count)
+                if (id < 1 || id > _forecasts.Count)
                     return NotFound();
 
-                return Ok(Forecasts[id - 1]);
+                return Ok(_forecasts[id - 1]);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving forecast for id {Id}", id);
+                return StatusCode(500);
+            }
+        }
+
+        [HttpDelete("{id}", Name = "DeleteWeatherForecastById")]
+        public IActionResult Delete(int id)
+        {
+            try
+            {
+                if (id < 1 || id > _forecasts.Count)
+                    return NotFound();
+
+                _forecasts.RemoveAt(id - 1);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting forecast for id {Id}", id);
                 return StatusCode(500);
             }
         }

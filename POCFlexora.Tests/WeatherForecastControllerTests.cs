@@ -50,5 +50,36 @@ namespace POCFlexora.Tests
             var forecast = Assert.IsType<WeatherForecast>(okResult.Value);
             Assert.NotNull(forecast.Summary);
         }
+
+        [Fact]
+        public void Delete_ValidId_ReturnsNoContent()
+        {
+            var result = _controller.Delete(1);
+
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(100)]
+        public void Delete_InvalidId_ReturnsNotFound(int id)
+        {
+            var result = _controller.Delete(id);
+
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Delete_ValidId_RemovesItemFromList()
+        {
+            var controller = new WeatherForecastController(_loggerMock.Object);
+            var beforeDelete = controller.Get().Count();
+
+            controller.Delete(1);
+
+            var afterDelete = controller.Get().Count();
+            Assert.Equal(beforeDelete - 1, afterDelete);
+        }
     }
 }
