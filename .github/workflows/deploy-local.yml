@@ -35,12 +35,12 @@ jobs:
 
           Write-Host "Git configured successfully for Windows self-hosted runner."
       
-      # 3. Setup .NET 8
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-          installation-path: ${{ runner.tool_cache }}/dotnet
+      # 3. Verify .NET is available
+      - name: Verify .NET
+        shell: powershell
+        run: |
+          $version = dotnet --version
+          Write-Host ".NET version: $version"
 
       # 4. Restore dependencies
       - name: Restore Dependencies
