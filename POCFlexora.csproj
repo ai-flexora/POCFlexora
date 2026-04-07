@@ -7,13 +7,17 @@
     <UserSecretsId>bcb68e36-364d-48bb-92ef-eee279b05f3d</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
+	  <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-
+	
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="xunit" Version="2.9.3" />
+	<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+	<PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="actions-runner\actions-runner\actions-runner\_work\_actions\actions\setup-dotnet\v4\__tests__\e2e-test-csproj\" />
     <Folder Include="NewFolder\" />
   </ItemGroup>
 
