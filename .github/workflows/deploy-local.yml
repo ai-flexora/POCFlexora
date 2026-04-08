@@ -5,6 +5,12 @@ on:
     types: [closed]
     branches:
       - master
+  workflow_dispatch:
+     inputs:
+       environment:
+         description: "Environment to deploy"
+         required: true
+         default: "local"
 
 jobs:
   deploy-local:
