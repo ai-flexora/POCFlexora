@@ -14,11 +14,12 @@ namespace POCFlexora.Tests
 
         public WeatherForecastControllerTests()
         {
+            WeatherForecastController.ResetForecasts();
             _loggerMock = new Mock<ILogger<WeatherForecastController>>();
             _controller = new WeatherForecastController(_loggerMock.Object);
         }
 
-        // ── GetById ──────────────────────────────────────────────────────────
+        // ── GetById ──────────────────────────────────────────────────────────────────
 
         [Theory]
         [InlineData(1)]
@@ -54,7 +55,7 @@ namespace POCFlexora.Tests
             Assert.NotNull(forecast.Summary);
         }
 
-        // ── GetByIdPaged ─────────────────────────────────────────────────────
+        // ── GetByIdPaged ────────────────────────────────────────────────────────────
 
         [Fact]
         public void GetByIdPaged_ValidIdAndPage_ReturnsOkWithPagedResult()
@@ -132,6 +133,97 @@ namespace POCFlexora.Tests
             var result = _controller.GetByIdPaged(1, pageNumber: 5, pageSize: 5);
 
             Assert.IsType<NotFoundResult>(result);
+        }
+
+        // ── Create (POST) ───────────────────────────────────────────────────────────
+
+        [Fact]
+        public void Create_ValidRequest_ReturnsCreated()
+        {
+            var request = new CreateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                TemperatureC = 25,
+                Summary = "Warm"
+            };
+
+            var result = _controller.Create(request);
+
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+            var forecast = Assert.IsType<WeatherForecast>(createdResult.Value);
+            Assert.Equal(request.TemperatureC, forecast.TemperatureC);
+            Assert.Equal(request.Summary, forecast.Summary);
+            Assert.Equal(request.Date, forecast.Date);
+        }
+
+        [Fact]
+        public void Create_NullRequest_ReturnsBadRequest()
+        {
+            var result = _controller.Create(null!);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Create_EmptySummary_ReturnsBadRequest()
+        {
+            var request = new CreateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                TemperatureC = 20,
+                Summary = ""
+            };
+
+            var result = _controller.Create(request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Create_WhitespaceSummary_ReturnsBadRequest()
+        {
+            var request = new CreateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                TemperatureC = 20,
+                Summary = "   "
+            };
+
+            var result = _controller.Create(request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Create_ValidRequest_IncreasesForecasts()
+        {
+            var countBefore = WeatherForecastController.Forecasts.Count;
+            var request = new CreateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                TemperatureC = 15,
+                Summary = "Cool"
+            };
+
+            _controller.Create(request);
+
+            Assert.Equal(countBefore + 1, WeatherForecastController.Forecasts.Count);
+        }
+
+        [Fact]
+        public void Create_ValidRequest_ReturnsCreatedAtActionWithCorrectRoute()
+        {
+            var request = new CreateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(2)),
+                TemperatureC = 30,
+                Summary = "Hot"
+            };
+
+            var result = _controller.Create(request);
+
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+            Assert.Equal(nameof(WeatherForecastController.GetById), createdResult.ActionName);
         }
     }
 }

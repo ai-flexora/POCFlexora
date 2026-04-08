@@ -9,10 +9,10 @@ namespace POCFlexora.Controllers
     {
         private static readonly string[] Summaries = new[]
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching","VeryHighHeat"
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching", "VeryHighHeat"
         };
 
-        private static readonly IReadOnlyList<WeatherForecast> Forecasts =
+        internal static List<WeatherForecast> Forecasts =
             Enumerable.Range(1, 20).Select(index => new WeatherForecast
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -25,6 +25,16 @@ namespace POCFlexora.Controllers
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
             _logger = logger;
+        }
+
+        internal static void ResetForecasts()
+        {
+            Forecasts = Enumerable.Range(1, 20).Select(index => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                TemperatureC = (index * 3) - 10,
+                Summary = Summaries[index % 10]
+            }).ToList();
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
@@ -61,9 +71,7 @@ namespace POCFlexora.Controllers
                 if (pageNumber < 1 || pageSize < 1)
                     return BadRequest("pageNumber and pageSize must be greater than 0.");
 
-                var anchor = Forecasts[id - 1];
                 var anchorIndex = id - 1;
-
                 var remaining = Forecasts.Skip(anchorIndex).ToList();
                 var totalRecords = remaining.Count;
                 var items = remaining
@@ -87,6 +95,35 @@ namespace POCFlexora.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving paged forecasts for id {Id}", id);
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost(Name = "CreateWeatherForecast")]
+        public IActionResult Create([FromBody] CreateWeatherForecastRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest("Request body is required.");
+
+                if (string.IsNullOrWhiteSpace(request.Summary))
+                    return BadRequest("Summary is required.");
+
+                var forecast = new WeatherForecast
+                {
+                    Date = request.Date,
+                    TemperatureC = request.TemperatureC,
+                    Summary = request.Summary
+                };
+
+                Forecasts.Add(forecast);
+
+                return CreatedAtAction(nameof(GetById), new { id = Forecasts.Count }, forecast);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating weather forecast");
                 return StatusCode(500);
             }
         }
