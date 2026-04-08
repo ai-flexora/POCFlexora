@@ -6,15 +6,13 @@ on:
     branches:
       - master
   workflow_dispatch:
-     inputs:
-       environment:
-         description: "Environment to deploy"
-         required: true
-         default: "local"
-
+     
 jobs:
   deploy-local:
-    if: github.event.pull_request.merged == true
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
     runs-on: self-hosted
 
     steps:
@@ -81,7 +79,8 @@ jobs:
           }
 
           if (-not $success) {
-            Write-Host "Swagger did not load after $maxRetries attempts"
+            Write-Host "Swagger failed to load"
+            docker logs pocflexora
             exit 1
           }
 
