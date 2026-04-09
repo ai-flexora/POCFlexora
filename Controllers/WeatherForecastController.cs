@@ -128,6 +128,34 @@ namespace POCFlexora.Controllers
             }
         }
 
+        [HttpPut("{id}", Name = "UpdateWeatherForecast")]
+        public IActionResult Update(int id, [FromBody] UpdateWeatherForecastRequest request)
+        {
+            try
+            {
+                if (id < 1 || id > Forecasts.Count)
+                    return NotFound();
+
+                if (request == null)
+                    return BadRequest("Request body is required.");
+
+                if (string.IsNullOrWhiteSpace(request.Summary))
+                    return BadRequest("Summary is required.");
+
+                var forecast = Forecasts[id - 1];
+                forecast.Date = request.Date;
+                forecast.TemperatureC = request.TemperatureC;
+                forecast.Summary = request.Summary;
+
+                return Ok(forecast);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating forecast for id {Id}", id);
+                return StatusCode(500);
+            }
+        }
+
         [HttpDelete("{id}", Name = "DeleteWeatherForecast")]
         public IActionResult Delete(int id)
         {

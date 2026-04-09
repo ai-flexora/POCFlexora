@@ -270,5 +270,120 @@ namespace POCFlexora.Tests
 
             Assert.Equal(secondForecast, WeatherForecastController.Forecasts[0]);
         }
+
+        // ── Update (PUT) ────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void Update_ValidRequest_ReturnsOk()
+        {
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(5)),
+                TemperatureC = 20,
+                Summary = "Warm"
+            };
+
+            var result = _controller.Update(1, request);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+        }
+
+        [Fact]
+        public void Update_ValidRequest_UpdatesForecastFields()
+        {
+            var newDate = DateOnly.FromDateTime(DateTime.Now.AddDays(5));
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = newDate,
+                TemperatureC = 35,
+                Summary = "Scorching"
+            };
+
+            var result = _controller.Update(1, request);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var forecast = Assert.IsType<WeatherForecast>(okResult.Value);
+            Assert.Equal(newDate, forecast.Date);
+            Assert.Equal(35, forecast.TemperatureC);
+            Assert.Equal("Scorching", forecast.Summary);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(21)]
+        [InlineData(100)]
+        public void Update_InvalidId_ReturnsNotFound(int id)
+        {
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now),
+                TemperatureC = 10,
+                Summary = "Cool"
+            };
+
+            var result = _controller.Update(id, request);
+
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Update_NullRequest_ReturnsBadRequest()
+        {
+            var result = _controller.Update(1, null!);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Update_EmptySummary_ReturnsBadRequest()
+        {
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now),
+                TemperatureC = 10,
+                Summary = ""
+            };
+
+            var result = _controller.Update(1, request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Update_WhitespaceSummary_ReturnsBadRequest()
+        {
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now),
+                TemperatureC = 10,
+                Summary = "   "
+            };
+
+            var result = _controller.Update(1, request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(10)]
+        [InlineData(20)]
+        public void Update_ValidId_UpdatesCorrectEntry(int id)
+        {
+            var request = new UpdateWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+                TemperatureC = 15,
+                Summary = "Mild"
+            };
+
+            _controller.Update(id, request);
+
+            var updated = WeatherForecastController.Forecasts[id - 1];
+            Assert.Equal("Mild", updated.Summary);
+            Assert.Equal(15, updated.TemperatureC);
+        }
     }
 }
