@@ -225,5 +225,50 @@ namespace POCFlexora.Tests
             var createdResult = Assert.IsType<CreatedAtActionResult>(result);
             Assert.Equal(nameof(WeatherForecastController.GetById), createdResult.ActionName);
         }
+
+        // ── Delete ──────────────────────────────────────────────────────────────────
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(10)]
+        [InlineData(20)]
+        public void Delete_ValidId_ReturnsNoContent(int id)
+        {
+            var result = _controller.Delete(id);
+
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(21)]
+        [InlineData(100)]
+        public void Delete_InvalidId_ReturnsNotFound(int id)
+        {
+            var result = _controller.Delete(id);
+
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Delete_ValidId_RemovesForecastFromList()
+        {
+            var countBefore = WeatherForecastController.Forecasts.Count;
+
+            _controller.Delete(1);
+
+            Assert.Equal(countBefore - 1, WeatherForecastController.Forecasts.Count);
+        }
+
+        [Fact]
+        public void Delete_ValidId_RemovesCorrectEntry()
+        {
+            var secondForecast = WeatherForecastController.Forecasts[1];
+
+            _controller.Delete(1);
+
+            Assert.Equal(secondForecast, WeatherForecastController.Forecasts[0]);
+        }
     }
 }
