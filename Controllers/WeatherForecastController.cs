@@ -190,5 +190,24 @@ namespace POCFlexora.Controllers
                 return StatusCode(500);
             }
         }
+
+        [HttpDelete("{id}", Name = "DeleteWeatherForecast")]
+        public IActionResult Delete(int id)
+        {
+            try
+            {
+                if (id < 1 || id > Forecasts.Count)
+                    return NotFound();
+
+                Forecasts.RemoveAt(id - 1);
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting forecast for id {Id}", id);
+                return StatusCode(500);
+            }
+        }
     }
 }
