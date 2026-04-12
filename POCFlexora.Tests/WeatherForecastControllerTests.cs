@@ -385,5 +385,128 @@ namespace POCFlexora.Tests
             Assert.Equal("Mild", updated.Summary);
             Assert.Equal(15, updated.TemperatureC);
         }
+
+        // ── Patch ───────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void Patch_ValidRequestAllFields_ReturnsOk()
+        {
+            var request = new PatchWeatherForecastRequest
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(5)),
+                TemperatureC = 20,
+                Summary = "Warm"
+            };
+
+            var result = _controller.Patch(1, request);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+        }
+
+        [Fact]
+        public void Patch_OnlySummary_UpdatesSummaryOnly()
+        {
+            var originalDate = WeatherForecastController.Forecasts[0].Date;
+            var originalTemp = WeatherForecastController.Forecasts[0].TemperatureC;
+            var request = new PatchWeatherForecastRequest { Summary = "Breezy" };
+
+            _controller.Patch(1, request);
+
+            var updated = WeatherForecastController.Forecasts[0];
+            Assert.Equal("Breezy", updated.Summary);
+            Assert.Equal(originalDate, updated.Date);
+            Assert.Equal(originalTemp, updated.TemperatureC);
+        }
+
+        [Fact]
+        public void Patch_OnlyTemperature_UpdatesTemperatureOnly()
+        {
+            var originalDate = WeatherForecastController.Forecasts[0].Date;
+            var originalSummary = WeatherForecastController.Forecasts[0].Summary;
+            var request = new PatchWeatherForecastRequest { TemperatureC = 42 };
+
+            _controller.Patch(1, request);
+
+            var updated = WeatherForecastController.Forecasts[0];
+            Assert.Equal(42, updated.TemperatureC);
+            Assert.Equal(originalDate, updated.Date);
+            Assert.Equal(originalSummary, updated.Summary);
+        }
+
+        [Fact]
+        public void Patch_OnlyDate_UpdatesDateOnly()
+        {
+            var newDate = DateOnly.FromDateTime(DateTime.Now.AddDays(99));
+            var originalTemp = WeatherForecastController.Forecasts[0].TemperatureC;
+            var originalSummary = WeatherForecastController.Forecasts[0].Summary;
+            var request = new PatchWeatherForecastRequest { Date = newDate };
+
+            _controller.Patch(1, request);
+
+            var updated = WeatherForecastController.Forecasts[0];
+            Assert.Equal(newDate, updated.Date);
+            Assert.Equal(originalTemp, updated.TemperatureC);
+            Assert.Equal(originalSummary, updated.Summary);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(21)]
+        [InlineData(100)]
+        public void Patch_InvalidId_ReturnsNotFound(int id)
+        {
+            var request = new PatchWeatherForecastRequest { Summary = "Cloudy" };
+
+            var result = _controller.Patch(id, request);
+
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Patch_NullRequest_ReturnsBadRequest()
+        {
+            var result = _controller.Patch(1, null!);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Patch_WhitespaceSummary_ReturnsBadRequest()
+        {
+            var request = new PatchWeatherForecastRequest { Summary = "   " };
+
+            var result = _controller.Patch(1, request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Patch_EmptySummary_ReturnsBadRequest()
+        {
+            var request = new PatchWeatherForecastRequest { Summary = "" };
+
+            var result = _controller.Patch(1, request);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public void Patch_EmptyRequest_ReturnsOkWithUnchangedForecast()
+        {
+            var original = WeatherForecastController.Forecasts[0];
+            var originalDate = original.Date;
+            var originalTemp = original.TemperatureC;
+            var originalSummary = original.Summary;
+            var request = new PatchWeatherForecastRequest();
+
+            _controller.Patch(1, request);
+
+            var updated = WeatherForecastController.Forecasts[0];
+            Assert.Equal(originalDate, updated.Date);
+            Assert.Equal(originalTemp, updated.TemperatureC);
+            Assert.Equal(originalSummary, updated.Summary);
+        }
     }
 }
