@@ -156,6 +156,41 @@ namespace POCFlexora.Controllers
             }
         }
 
+        [HttpPatch("{id}", Name = "PatchWeatherForecast")]
+        public IActionResult Patch(int id, [FromBody] PatchWeatherForecastRequest request)
+        {
+            try
+            {
+                if (id < 1 || id > Forecasts.Count)
+                    return NotFound();
+
+                if (request == null)
+                    return BadRequest("Request body is required.");
+
+                var forecast = Forecasts[id - 1];
+
+                if (request.Date.HasValue)
+                    forecast.Date = request.Date.Value;
+
+                if (request.TemperatureC.HasValue)
+                    forecast.TemperatureC = request.TemperatureC.Value;
+
+                if (request.Summary != null)
+                {
+                    if (string.IsNullOrWhiteSpace(request.Summary))
+                        return BadRequest("Summary cannot be empty or whitespace.");
+                    forecast.Summary = request.Summary;
+                }
+
+                return Ok(forecast);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error patching forecast for id {Id}", id);
+                return StatusCode(500);
+            }
+        }
+
         [HttpDelete("{id}", Name = "DeleteWeatherForecast")]
         public IActionResult Delete(int id)
         {
