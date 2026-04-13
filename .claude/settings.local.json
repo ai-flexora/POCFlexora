@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "mcp__github__create_pull_request",
-      "mcp__github__create_branch"
+      "mcp__github__create_branch",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "mcp__flexora-rag__search_codebase",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe pr:*)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe auth:*)",
+      "mcp__flexora-rag__get_index_stats",
+      "mcp__flexora-rag__list_indexed_files"
     ]
   }
 }
