@@ -60,46 +60,7 @@ namespace POCFlexora.Controllers
             }
         }
 
-        [HttpGet("{id}/paged", Name = "GetWeatherForecastByIdPaged")]
-        public IActionResult GetByIdPaged(int id, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
-        {
-            try
-            {
-                if (id < 1 || id > Forecasts.Count)
-                    return NotFound();
-
-                if (pageNumber < 1 || pageSize < 1)
-                    return BadRequest("pageNumber and pageSize must be greater than 0.");
-
-                var anchorIndex = id - 1;
-                var remaining = Forecasts.Skip(anchorIndex).ToList();
-                var totalRecords = remaining.Count;
-                var items = remaining
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                if (!items.Any())
-                    return NotFound();
-
-                var result = new PagedResult<WeatherForecast>
-                {
-                    Items = items,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize,
-                    TotalRecords = totalRecords
-                };
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving paged forecasts for id {Id}", id);
-                return StatusCode(500);
-            }
-        }
-
-        [HttpPost(Name = "CreateWeatherForecast")]
+[HttpPost(Name = "CreateWeatherForecast")]
         public IActionResult Create([FromBody] CreateWeatherForecastRequest request)
         {
             try
@@ -156,58 +117,5 @@ namespace POCFlexora.Controllers
             }
         }
 
-        [HttpPatch("{id}", Name = "PatchWeatherForecast")]
-        public IActionResult Patch(int id, [FromBody] PatchWeatherForecastRequest request)
-        {
-            try
-            {
-                if (id < 1 || id > Forecasts.Count)
-                    return NotFound();
-
-                if (request == null)
-                    return BadRequest("Request body is required.");
-
-                var forecast = Forecasts[id - 1];
-
-                if (request.Date.HasValue)
-                    forecast.Date = request.Date.Value;
-
-                if (request.TemperatureC.HasValue)
-                    forecast.TemperatureC = request.TemperatureC.Value;
-
-                if (request.Summary != null)
-                {
-                    if (string.IsNullOrWhiteSpace(request.Summary))
-                        return BadRequest("Summary cannot be empty or whitespace.");
-                    forecast.Summary = request.Summary;
-                }
-
-                return Ok(forecast);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error patching forecast for id {Id}", id);
-                return StatusCode(500);
-            }
-        }
-
-        [HttpDelete("{id}", Name = "DeleteWeatherForecast")]
-        public IActionResult Delete(int id)
-        {
-            try
-            {
-                if (id < 1 || id > Forecasts.Count)
-                    return NotFound();
-
-                Forecasts.RemoveAt(id - 1);
-
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting forecast for id {Id}", id);
-                return StatusCode(500);
-            }
-        }
     }
 }
